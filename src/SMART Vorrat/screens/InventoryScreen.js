@@ -14,15 +14,18 @@ import {
 import { HouseholdContext } from '../../HouseholdContext';
 import FoodSearchInput, { lookupProductByBarcode } from '../components/FoodSearchInput';
 import BarcodeScannerModal from '../components/BarcodeScannerModal';
+import NutritionSummary from '../../components/nutrition-summary';
 
-export const InventoryScreen = ({ navigation }) => {
-  const { inventory, addInventoryItem, updateInventoryItem, deleteInventoryItem, addToShoppingList } = useContext(HouseholdContext);
+export const InventoryScreen = ({ navigation, onOpenNutrition }) => {
+  const { inventory, nutritionProfile, nutritionLogs, addInventoryItem, updateInventoryItem, deleteInventoryItem, addToShoppingList } = useContext(HouseholdContext);
   const [showModal, setShowModal] = useState(false);
   const [itemName, setItemName] = useState('');
   const [itemQuantity, setItemQuantity] = useState('');
   const [itemUnit, setItemUnit] = useState('Stück');
   const [itemBarcode, setItemBarcode] = useState('');
+  const [itemBrand, setItemBrand] = useState('');
   const [itemImage, setItemImage] = useState(null);
+  const [itemNutrition, setItemNutrition] = useState(null);
   const [dietaryPreference, setDietaryPreference] = useState('');
   const [itemToRemove, setItemToRemove] = useState(null);
   const [replacementQuantity, setReplacementQuantity] = useState('1');
@@ -62,7 +65,9 @@ export const InventoryScreen = ({ navigation }) => {
         unit: itemUnit,
         category: getCategory(itemName),
         barcode: itemBarcode.trim() || null,
+        brand: itemBrand.trim() || null,
         imageUrl: itemImage,
+        nutrition: itemNutrition,
         dietaryPreference,
       });
 
@@ -70,7 +75,9 @@ export const InventoryScreen = ({ navigation }) => {
       setItemQuantity('');
       setItemUnit('Stück');
       setItemBarcode('');
+      setItemBrand('');
       setItemImage(null);
+      setItemNutrition(null);
       setDietaryPreference('');
       setShowModal(false);
       Alert.alert('Erfolg', 'Artikel hinzugefügt');
@@ -111,7 +118,9 @@ export const InventoryScreen = ({ navigation }) => {
     try {
       const product = await lookupProductByBarcode(barcode);
       if (product.name) setItemName(product.name);
+      setItemBrand(product.brand || '');
       if (product.imageUrl) setItemImage(product.imageUrl);
+      setItemNutrition(product.nutrition || null);
     } catch (error) {
       Alert.alert('Barcode', 'Kein Produkt zu diesem Barcode gefunden. Der Barcode wurde trotzdem übernommen.');
     }
@@ -191,6 +200,9 @@ export const InventoryScreen = ({ navigation }) => {
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
+        ListHeaderComponent={nutritionProfile?.enabled ? (
+          <NutritionSummary profile={nutritionProfile} logs={nutritionLogs} onPress={onOpenNutrition} compact />
+        ) : null}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>Keine Artikel in der Vorratskammer</Text>
@@ -223,7 +235,9 @@ export const InventoryScreen = ({ navigation }) => {
               onSelect={(product) => {
                 setItemName(product.name);
                 setItemBarcode(product.barcode || '');
+                setItemBrand(product.brand || '');
                 setItemImage(product.imageUrl || null);
+                setItemNutrition(product.nutrition || null);
               }}
             />
 

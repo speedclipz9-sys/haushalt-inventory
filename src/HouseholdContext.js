@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import { database } from './SMART Vorrat/firebaseConfig';
 import { ref, set, get, update, push, onValue, remove, child } from 'firebase/database';
 import { AuthContext } from './SMART Vorrat/AuthContext';
+import { localDateKey } from './utils/nutrition';
 
 export const HouseholdContext = createContext();
 
@@ -14,8 +15,16 @@ export const HouseholdProvider = ({ children }) => {
   const [householdMembers, setHouseholdMembers] = useState({});
   const [chatMessages, setChatMessages] = useState({});
   const [recurringFoods, setRecurringFoods] = useState({});
+  const [nutritionProfileState, setNutritionProfileState] = useState({ userId: null, value: null });
+  const [nutritionLogsState, setNutritionLogsState] = useState({ key: null, value: {} });
+  const [recipeFavoritesState, setRecipeFavoritesState] = useState({ userId: null, value: {} });
+  const [nutritionDay, setNutritionDay] = useState(() => localDateKey());
   const [chatNotification, setChatNotification] = useState(null);
   const [loading, setLoading] = useState(true);
+  const nutritionProfile = nutritionProfileState.userId === user?.uid ? nutritionProfileState.value : null;
+  const nutritionLogKey = `${user?.uid || ''}:${nutritionDay}`;
+  const nutritionLogs = nutritionLogsState.key === nutritionLogKey ? nutritionLogsState.value : {};
+  const recipeFavorites = recipeFavoritesState.userId === user?.uid ? recipeFavoritesState.value : {};
 
   useEffect(() => {
     if (!user) {
@@ -97,6 +106,36 @@ export const HouseholdProvider = ({ children }) => {
   }, [currentHousehold, user?.uid]);
 
   useEffect(() => {
+    const timer = setInterval(() => setNutritionDay(localDateKey()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!user?.uid) return undefined;
+
+    const profileUnsubscribe = onValue(
+      ref(database, `users/${user.uid}/nutrition/profile`),
+      (snapshot) => setNutritionProfileState({ userId: user.uid, value: snapshot.val() || null })
+    );
+    const logsUnsubscribe = onValue(
+      ref(database, `users/${user.uid}/nutrition/logs/${nutritionDay}`),
+      (snapshot) => setNutritionLogsState({ key: nutritionLogKey, value: snapshot.val() || {} })
+    );
+
+    return () => {
+      profileUnsubscribe();
+      logsUnsubscribe();
+    };
+  }, [user?.uid, nutritionDay, nutritionLogKey]);
+
+  useEffect(() => {
+    if (!user?.uid) return undefined;
+    return onValue(ref(database, `users/${user.uid}/recipeFavorites`), (snapshot) => {
+      setRecipeFavoritesState({ userId: user.uid, value: snapshot.val() || {} });
+    });
+  }, [user?.uid]);
+
+  useEffect(() => {
     if (!currentHousehold) {
       setRecurringFoods({});
       return undefined;
@@ -122,6 +161,46 @@ export const HouseholdProvider = ({ children }) => {
   const deleteRecurringFood = async (foodId) => {
     if (!currentHousehold) throw new Error('No household selected');
     await remove(ref(database, `households/${currentHousehold}/recurringFoods/${foodId}`));
+  };
+
+  const saveNutritionProfile = async (profile) => {
+    if (!user?.uid) throw new Error('User not authenticated');
+    await set(ref(database, `users/${user.uid}/nutrition/profile`), {
+      ...profile,
+      enabled: true,
+      updatedAt: new Date().toISOString(),
+    });
+  };
+
+  const disableNutrition = async () => {
+    if (!user?.uid) throw new Error('User not authenticated');
+    await update(ref(database, `users/${user.uid}/nutrition/profile`), {
+      enabled: false,
+      updatedAt: new Date().toISOString(),
+    });
+  };
+
+  const addNutritionLog = async (entry) => {
+    if (!user?.uid) throw new Error('User not authenticated');
+    const logRef = push(ref(database, `users/${user.uid}/nutrition/logs/${nutritionDay}`));
+    await set(logRef, {
+      ...entry,
+      id: logRef.key,
+      date: nutritionDay,
+      createdAt: new Date().toISOString(),
+    });
+  };
+
+  const deleteNutritionLog = async (logId) => {
+    if (!user?.uid) throw new Error('User not authenticated');
+    await remove(ref(database, `users/${user.uid}/nutrition/logs/${nutritionDay}/${logId}`));
+  };
+
+  const toggleRecipeFavorite = async (recipeId) => {
+    if (!user?.uid) throw new Error('User not authenticated');
+    const favoriteRef = ref(database, `users/${user.uid}/recipeFavorites/${recipeId}`);
+    if (recipeFavorites[recipeId]) await remove(favoriteRef);
+    else await set(favoriteRef, true);
   };
 
   const enableChatNotifications = async () => {
@@ -208,7 +287,9 @@ export const HouseholdProvider = ({ children }) => {
       unit: item.unit,
       category: item.category,
       barcode: item.barcode || null,
+      brand: item.brand || null,
       imageUrl: item.imageUrl || null,
+      nutrition: item.nutrition || null,
       createdAt: new Date().toISOString(),
       consumptionVelocity: item.consumptionVelocity || 0,
       daysSinceCreated: 0,
@@ -317,6 +398,9 @@ export const HouseholdProvider = ({ children }) => {
         householdMembers,
         chatMessages,
         recurringFoods,
+        nutritionProfile,
+        nutritionLogs,
+        recipeFavorites,
         chatNotification,
         loading,
         createHousehold,
@@ -333,6 +417,11 @@ export const HouseholdProvider = ({ children }) => {
         dismissChatNotification: () => setChatNotification(null),
         addRecurringFood,
         deleteRecurringFood,
+        saveNutritionProfile,
+        disableNutrition,
+        addNutritionLog,
+        deleteNutritionLog,
+        toggleRecipeFavorite,
       }}
     >
       {children}

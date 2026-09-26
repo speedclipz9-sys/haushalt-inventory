@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+const { normalizeNutrition } = require('../../utils/nutrition');
 
 const isLocalWeb = typeof window !== 'undefined' && window.location.hostname === 'localhost';
 const SEARCH_PROXY_URL = process.env.EXPO_PUBLIC_API_BASE_URL || (isLocalWeb ? 'http://localhost:8787/search' : '/api/openfoodfacts?mode=search&q=');
@@ -16,6 +17,7 @@ export async function lookupProductByBarcode(barcode) {
     quantity: product.quantity,
     barcode: product.code || barcode,
     imageUrl: product.image_front_small_url || product.image_front_thumb_url || null,
+    nutrition: normalizeNutrition(product),
   };
 }
 
@@ -46,6 +48,7 @@ export default function FoodSearchInput({ value, onChangeText, onSelect }) {
             quantity: product.quantity,
             barcode: product.code,
             imageUrl: product.image_front_small_url || product.image_front_thumb_url || null,
+            nutrition: normalizeNutrition(product),
           }))
           .filter((product) => product.name)
           .filter((product, index, all) => all.findIndex((item) => item.name === product.name) === index);

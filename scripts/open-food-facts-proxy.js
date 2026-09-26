@@ -1,7 +1,7 @@
 const http = require('http');
 
 const PORT = 8787;
-const SEARCH_FIELDS = 'product_name,product_name_de,generic_name,generic_name_de,brands,quantity,code,image_front_small_url,image_front_thumb_url';
+const SEARCH_FIELDS = 'product_name,product_name_de,generic_name,generic_name_de,brands,quantity,code,image_front_small_url,image_front_thumb_url,nutriments,nutrition_data_per,serving_size';
 
 const server = http.createServer(async (request, response) => {
   response.setHeader('Access-Control-Allow-Origin', '*');

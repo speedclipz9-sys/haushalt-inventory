@@ -1,5 +1,8 @@
 import { useContext, useState, type Context } from 'react';
 import { Alert, Image, Platform, ScrollView, Share, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import NutritionScreen from './nutrition-screen';
+import NutritionSummary from './nutrition-summary';
+import RecipeScreen from './recipe-screen';
 
 const { InventoryScreen } = require('../SMART Vorrat/screens/InventoryScreen');
 const { ShoppingListScreen } = require('../SMART Vorrat/screens/ShoppingListScreen');
@@ -8,11 +11,11 @@ const { HouseholdContext } = require('../HouseholdContext');
 const HouseholdChatScreen = require('../SMART Vorrat/screens/HouseholdChatScreen').default;
 const FoodSearchInput = require('../SMART Vorrat/components/FoodSearchInput').default;
 
-type DashboardView = 'inventory' | 'shopping' | 'overview' | 'household' | 'chat' | 'settings' | 'impressum';
+type DashboardView = 'inventory' | 'shopping' | 'overview' | 'household' | 'chat' | 'nutrition' | 'recipes' | 'settings' | 'impressum';
 
 export default function AppDashboard() {
   const { user, userProfile, logOut } = useContext(AuthContext as Context<any>);
-  const { currentHousehold, inventory, shoppingList, householdMembers, recurringFoods, addRecurringFood, deleteRecurringFood, addToShoppingList, chatNotification, dismissChatNotification, enableChatNotifications } = useContext(
+  const { currentHousehold, inventory, shoppingList, householdMembers, recurringFoods, nutritionProfile, nutritionLogs, recipeFavorites, toggleRecipeFavorite, saveNutritionProfile, disableNutrition, addNutritionLog, deleteNutritionLog, addRecurringFood, deleteRecurringFood, addToShoppingList, chatNotification, dismissChatNotification, enableChatNotifications } = useContext(
     HouseholdContext as Context<any>
   );
   const [activeView, setActiveView] = useState<DashboardView>(() => {
@@ -28,19 +31,55 @@ export default function AppDashboard() {
     if (typeof window !== 'undefined') window.sessionStorage.setItem('haushalt-dashboard-view', view);
   };
 
-  const navigation = [
+  const navigation: [DashboardView, string, string][] = [
     ['overview', 'Übersicht', '⌂'],
     ['shopping', 'Einkaufsliste', '✓'],
     ['inventory', 'Vorrat', '▣'],
+    ['recipes', 'Rezepte', '♨'],
     ['settings', 'Einstellungen', '⚙'],
-  ] as const;
+  ];
+  if (nutritionProfile?.enabled) navigation.splice(3, 0, ['nutrition', 'Ernährung', '◉']);
+
+  const handleDisableNutrition = async () => {
+    await disableNutrition();
+    navigate('overview');
+  };
 
   return (
     <View style={styles.appContainer}>
       <View style={styles.screenContainer}>
-        {activeView === 'inventory' && <InventoryScreen />}
+        {activeView === 'inventory' && <InventoryScreen onOpenNutrition={() => navigate('nutrition')} />}
         {activeView === 'shopping' && <ShoppingListScreen />}
-        {activeView === 'overview' && <OverviewScreen inventory={inventory} shoppingList={shoppingList} />}
+        {activeView === 'recipes' && (
+          <RecipeScreen
+            favoriteIds={recipeFavorites}
+            nutritionEnabled={Boolean(nutritionProfile?.enabled)}
+            inventory={inventory}
+            addToShoppingList={addToShoppingList}
+            toggleFavorite={toggleRecipeFavorite}
+            logNutrition={addNutritionLog}
+          />
+        )}
+        {activeView === 'overview' && (
+          <OverviewScreen
+            inventory={inventory}
+            shoppingList={shoppingList}
+            nutritionProfile={nutritionProfile}
+            nutritionLogs={nutritionLogs}
+            onOpenNutrition={() => navigate('nutrition')}
+          />
+        )}
+        {activeView === 'nutrition' && (
+          <NutritionScreen
+            profile={nutritionProfile}
+            logs={nutritionLogs}
+            inventory={inventory}
+            onSaveProfile={saveNutritionProfile}
+            onDisable={handleDisableNutrition}
+            onAddLog={addNutritionLog}
+            onDeleteLog={deleteNutritionLog}
+          />
+        )}
         {activeView === 'household' && (
           <HouseholdScreen householdId={currentHousehold} members={householdMembers} onOpenChat={() => navigate('chat')} onEnableNotifications={enableChatNotifications} />
         )}
@@ -87,7 +126,7 @@ export default function AppDashboard() {
   );
 }
 
-function OverviewScreen({ inventory, shoppingList }: { inventory: any; shoppingList: any }) {
+function OverviewScreen({ inventory, shoppingList, nutritionProfile, nutritionLogs, onOpenNutrition }: { inventory: any; shoppingList: any; nutritionProfile: any; nutritionLogs: any; onOpenNutrition: () => void }) {
   const inventoryItems = Object.values(inventory || {}) as any[];
   const shoppingItems = Object.values(shoppingList || {}) as any[];
   const totalQuantity = inventoryItems.reduce((total, item) => total + Number(item.quantity || 0), 0);
@@ -109,6 +148,17 @@ function OverviewScreen({ inventory, shoppingList }: { inventory: any; shoppingL
         <StatCard label="Kategorien" value={categories} />
         <StatCard label="Einkaufsliste" value={shoppingItems.length} />
       </View>
+      {nutritionProfile?.enabled ? (
+        <NutritionSummary profile={nutritionProfile} logs={nutritionLogs} onPress={onOpenNutrition} />
+      ) : (
+        <View style={styles.infoCard}>
+          <Text style={styles.infoTitle}>Ernährung</Text>
+          <Text style={styles.mutedText}>Lege persönliche Tagesziele fest und protokolliere Lebensmittel aus deinem Vorrat.</Text>
+          <TouchableOpacity style={styles.primaryButton} onPress={onOpenNutrition}>
+            <Text style={styles.primaryButtonText}>Ernährung aktivieren</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       <View style={styles.infoCard}>
         <Text style={styles.infoTitle}>Niedriger Bestand</Text>
         <Text style={styles.infoValue}>{lowStock} Artikel mit höchstens 1 Einheit</Text>
