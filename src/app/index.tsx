@@ -4,10 +4,10 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import AppDashboard from '../components/app-dashboard';
 import IntroScreen from '../components/intro-screen';
 
-const { AuthScreen } = require('../../../SMART Vorrat/screens/AuthScreen');
-const { HouseholdSetupScreen } = require('../../../SMART Vorrat/screens/screens/HouseholdSetupScreen');
-const { AuthContext } = require('../../../SMART Vorrat/AuthContext');
-const { HouseholdContext } = require('../../../HouseholdContext');
+const { AuthScreen } = require('../SMART Vorrat/screens/AuthScreen');
+const { HouseholdSetupScreen } = require('../SMART Vorrat/screens/screens/HouseholdSetupScreen');
+const { AuthContext } = require('../SMART Vorrat/AuthContext');
+const { HouseholdContext } = require('../HouseholdContext');
 
 export default function HomeScreen() {
   const [showIntro, setShowIntro] = useState(true);

@@ -1,12 +1,12 @@
 import { useContext, useState, type Context } from 'react';
 import { Alert, Image, Platform, ScrollView, Share, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-const { InventoryScreen } = require('../../../SMART Vorrat/screens/InventoryScreen');
-const { ShoppingListScreen } = require('../../../SMART Vorrat/screens/ShoppingListScreen');
-const { AuthContext } = require('../../../SMART Vorrat/AuthContext');
-const { HouseholdContext } = require('../../../HouseholdContext');
-const HouseholdChatScreen = require('../../../SMART Vorrat/screens/HouseholdChatScreen').default;
-const FoodSearchInput = require('../../../SMART Vorrat/components/FoodSearchInput').default;
+const { InventoryScreen } = require('../SMART Vorrat/screens/InventoryScreen');
+const { ShoppingListScreen } = require('../SMART Vorrat/screens/ShoppingListScreen');
+const { AuthContext } = require('../SMART Vorrat/AuthContext');
+const { HouseholdContext } = require('../HouseholdContext');
+const HouseholdChatScreen = require('../SMART Vorrat/screens/HouseholdChatScreen').default;
+const FoodSearchInput = require('../SMART Vorrat/components/FoodSearchInput').default;
 
 type DashboardView = 'inventory' | 'shopping' | 'overview' | 'household' | 'chat' | 'settings' | 'impressum';
 
